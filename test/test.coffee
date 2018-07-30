@@ -72,28 +72,91 @@ describe "rss-watcher",->
     watcher = new Watcher(feed)
     article1 =
       title: 'first title'
+      link: 'article1'
       pubDate: new Date('Wed, 18 Jul 2018 22:45:19 +0000')
     article2 =
       title: 'second title'
+      link: 'article2'
       pubDate: article1.pubDate
     article3 =
       title: 'third title'
+      link: 'article3'
       pubDate: new Date('Wed, 18 Jul 2018 22:45:20 +0000')
     assert(watcher.isNewArticle(article1),'expected article1 to be new')
     
-    watcher.updateLastPubArticle(article1)
+    watcher.updateLastPubDate(article1)
     assert(!watcher.isNewArticle(article1),'expected article1 not to be new')
     assert(watcher.isNewArticle(article2),'expected article2 to be new')
     
-    watcher.updateLastPubArticle(article2)
+    watcher.updateLastPubDate(article2)
     assert(!watcher.isNewArticle(article1),'expected article1 not to be new')
     assert(!watcher.isNewArticle(article2),'expected article2 not to be new')
 
     assert(watcher.isNewArticle(article3),'expected article3 to be new')
-    watcher.updateLastPubArticle(article3)
+    watcher.updateLastPubDate(article3)
     assert(!watcher.isNewArticle(article1),'expected article1 not to be new')
     assert(!watcher.isNewArticle(article2),'expected article2 not to be new')
     assert(!watcher.isNewArticle(article3),'expected article3 not to be new')
+    done()
+
+
+  it "isNewArticle indicates when an article is new",(done)->
+    watcher = new Watcher(feed)
+    article1 =
+      title: 'first title'
+      link: 'article1'
+      pubDate: new Date('Wed, 18 Jul 2018 22:45:19 +0000')
+    assert(watcher.isNewArticle(article1),'expected article1 to be new')
+    watcher.updateLastPubDate(article1)
+    assert(!watcher.isNewArticle(article1),'expected article1 not to be new')
+    done()
+
+  it "isUpdatedArticle indicates when an article is updated",(done)->
+    watcher = new Watcher(feed)
+    article1 =
+      title: 'first title'
+      link: 'article1'
+      pubDate: new Date('Wed, 18 Jul 2018 22:45:19 +0000')
+    assert(!watcher.isUpdatedArticle(article1),'expected article1 not to be updated')
+    watcher.updateLastPubDate(article1)
+    assert(!watcher.isUpdatedArticle(article1),'expected article1 not to be updated')
+    article1.pubDate = new Date('Wed, 18 Jul 2018 23:00:00 +0000')
+    assert(watcher.isUpdatedArticle(article1),'expected article1 to be updated')
+    done()
+
+
+  it "notifies when articles are new or changed",(done) ->
+    article1 =
+      title: 'first title'
+      link: 'a-uri'
+      pubDate: new Date('Wed, 18 Jul 2018 22:45:19 +0000')
+    article2 =
+      title: 'second title'
+      link: 'another-uri'
+      pubDate: new Date('Wed, 18 Jul 2018 20:45:19 +0000')
+    newArticleCount = 0
+    updatedArticleCount = 0
+    watcher = new Watcher(feed)
+    watcher.on("new article",(article)->
+      newArticleCount++
+    )
+    watcher.on("updated article",(article)->
+      updatedArticleCount++
+    )
+    watcher.notifyIfNeeded(article1)
+    assert(newArticleCount == 1,"1 new articles")
+    assert(updatedArticleCount == 0,"no updated articles")
+    watcher.notifyIfNeeded(article1)
+    assert(newArticleCount == 1,"1 new articles")
+    assert(updatedArticleCount == 0,"no updated articles")
+    watcher.notifyIfNeeded(article2)
+    assert(newArticleCount == 2,"2 new articles")
+    assert(updatedArticleCount == 0,"0 updated articles")
+    article2.pubDate = new Date('Wed, 18 Jul 2018 22:45:19 +0000')
+    watcher.notifyIfNeeded(article1)
+    watcher.notifyIfNeeded(article2)
+    assert(newArticleCount == 2,"2 new articles")
+    assert(updatedArticleCount == 1,"1 updated articles")
     done()
 
   it "stop",(done)->

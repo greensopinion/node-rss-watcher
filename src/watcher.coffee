@@ -28,8 +28,7 @@ class Watcher extends EventEmitter
 
     @feedUrl = feedUrl
     @interval = null
-    @lastPubDate = null
-    @lastPubTitles = []
+    @lastPubDateByLink = {}
     @timer = null
     @watch = =>
 
@@ -38,9 +37,7 @@ class Watcher extends EventEmitter
           return @emit 'error', err if err
 
           for article in articles
-            if @isNewArticle(article)
-              @emit 'new article',article
-              @updateLastPubArticle(article)
+            @notifyIfNeeded(article)
 
       return setInterval ->
         fetch(@feedUrl)
@@ -57,25 +54,31 @@ class Watcher extends EventEmitter
       flag = true
     return flag
 
-  updateLastPubArticle:(article)=>
-    newPubDate = article.pubDate / 1000
-    if @lastPubDate == newPubDate
-      @lastPubTitles.push(article.title)
-    else
-      @lastPubTitles = [article.title]
-    @lastPubDate = newPubDate
+  notifyIfNeeded:(article)=>
+    if @isNewArticle(article)
+      @emit 'new article',article
+      @updateLastPubDate(article)
+    else if (@isUpdatedArticle(article))
+      @emit 'updated article',article
+      @updateLastPubDate(article)
+
+  updateLastPubDate:(article)=>
+    @lastPubDateByLink[article.link] = article.pubDate/1000
+
+  isUpdatedArticle:(article)=>
+    lastPubDate = @lastPubDateByLink[article.link]
+    return lastPubDate != null and lastPubDate < article.pubDate/1000
 
   isNewArticle:(article)=>
-    return (@lastPubDate is null and @lastPubTitles.length == 0) or
-            (@lastPubDate <= article.pubDate/1000 and article.title not in @lastPubTitles)
+    return !@lastPubDateByLink[article.link]?
 
   run:(callback)=>
 
     initialize = (callback)=>
       fetchFeed @feedUrl,(err,articles)=>
         return callback new Error(err),null if err? and callback?
-        @lastPubDate = articles[articles.length-1].pubDate / 1000
-        @lastPubTitle = articles[articles.length-1].title
+        for article in articles
+          @updateLastPubDate(article)
         @timer = @watch()
         return callback null, articles if callback?
 

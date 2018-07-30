@@ -54,6 +54,9 @@ rss-watcher [![Build Status](https://travis-ci.org/nikezono/node-rss-watcher.png
     watcher.on "new article",(article)->
       console.log article # article object
 
+    watcher.on "updated article",(article)->
+      console.log article # article object
+      
     watcher.on "stop", ->
       console.log 'stop'
 
@@ -68,7 +71,7 @@ rss-watcher [![Build Status](https://travis-ci.org/nikezono/node-rss-watcher.png
 
 Spec Report:
 
-    npm -i -g grunt grunt-cli
+    npm i -g grunt grunt-cli
     grunt test
 
 Coverage dump:
